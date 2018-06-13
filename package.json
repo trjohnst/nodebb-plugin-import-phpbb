@@ -1,7 +1,7 @@
 {
-  "name": "nodebb-plugin-import-phpbb",
+  "name": "nodebb-plugin-import-phpnuke-phpbb",
   "version": "0.1.5",
-  "description": "A phpBB2 to NodeBB data exporter",
+  "description": "A NodeBB data exporter, for phpBB port v2.0.7 based on Tom Nitzschner's phpbb2.0.6 upgraded to phpBB 2.0.7 standalone and compatible with nodebb-plugin-import",
   "main": "./index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,8 +19,8 @@
     "import"
   ],
   "author": {
-    "name": "psychobunny",
-    "email": "psycho.bunny@hotmail.com"
+    "name": "trjohnst",
+    "email": "contact@thomasjohnston.services"
   },
   "license": "MIT",
   "bugs": {

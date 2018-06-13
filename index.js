@@ -19,20 +19,30 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
             port: config.dbport || config.port || 3306,
             database: config.dbname || config.name || config.database || 'phpbb'
         };
+        var _prefix = config.prefix || config.tablePrefix || '' /* nuke_ ? */;
+
+        Exporter.log('starting with config ', _config);
+        Exporter.log('starting with prefix ', _prefix);
 
         Exporter.config(_config);
-        Exporter.config('prefix', config.prefix || config.tablePrefix || '' /* phpbb_ ? */ );
+        Exporter.config('prefix', _prefix );
+
+        Exporter.log('connecting to mysql...');
 
         Exporter.connection = mysql.createConnection(_config);
         Exporter.connection.connect();
+
+        Exporter.log('connected to mysql');
 
         callback(null, Exporter.config());
     };
 
     Exporter.getUsers = function(callback) {
+        Exporter.log('getUsers');
         return Exporter.getPaginatedUsers(0, -1, callback);
     };
     Exporter.getPaginatedUsers = function(start, limit, callback) {
+        Exporter.log('getPaginatedUsers');
         callback = !_.isFunction(callback) ? noop : callback;
 
         var err;
@@ -100,21 +110,23 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
     };
 
     Exporter.getCategories = function(callback) {
-        return Exporter.getPaginatedCategories(0, -1, callback);    
+        Exporter.log('getCategories');
+        return Exporter.getPaginatedCategories(0, -1, callback);
     };
     Exporter.getPaginatedCategories = function(start, limit, callback) {
+        Exporter.log('getPaginatedCategories');
         callback = !_.isFunction(callback) ? noop : callback;
 
         var err;
         var prefix = Exporter.config('prefix');
         var startms = +new Date();
         var query = 'SELECT '
-            + prefix + 'forums.forum_id as _cid, '
-            + prefix + 'forums.forum_name as _name, '
-            + prefix + 'forums.forum_desc as _description '
-            + 'FROM ' + prefix + 'forums '
+            + prefix + 'bbforums.forum_id as _cid, '
+            + prefix + 'bbforums.forum_name as _name, '
+            + prefix + 'bbforums.forum_desc as _description '
+            + 'FROM ' + prefix + 'bbforums '
             +  (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
-            
+
         if (!Exporter.connection) {
             err = {error: 'MySQL connection is not setup. Run setup(config) first'};
             Exporter.error(err.error);
@@ -143,45 +155,66 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
     };
 
     Exporter.getTopics = function(callback) {
+        Exporter.log('getTopics');
         return Exporter.getPaginatedTopics(0, -1, callback);
     };
     Exporter.getPaginatedTopics = function(start, limit, callback) {
+        Exporter.log('getPaginatedTopics');
         callback = !_.isFunction(callback) ? noop : callback;
+
+        // uses nuke_bbtopics, nuke_bbposts, nuke_bbposts_text
+        // nuke_bbtopics:
+        //   topic_id
+        //   forum_id
+        //   topic_first_post_id
+        //   topic_views
+        //   topic_title
+        //   topic_views
+        //   topic_time
+        //   topic_status
+        // nuke_bbposts: (has post id and corresponding topic id)
+        //   poster_id
+        //   topic_id
+        // nuke_bbposts_text: (has corresponding post id)
+        //   post_text
+        // unknown: where's topic_approved?
 
         var err;
         var prefix = Exporter.config('prefix');
         var startms = +new Date();
         var query =
             'SELECT '
-            + prefix + 'topics.topic_id as _tid, '
-            + prefix + 'topics.forum_id as _cid, '
+            + prefix + 'bbtopics.topic_id as _tid, '
+            + prefix + 'bbtopics.forum_id as _cid, '
 
             // this is the 'parent-post'
             // see https://github.com/akhoury/nodebb-plugin-import#important-note-on-topics-and-posts
             // I don't really need it since I just do a simple join and get its content, but I will include for the reference
             // remember this post EXCLUDED in the exportPosts() function
-            + prefix + 'topics.topic_first_post_id as _pid, '
+            + prefix + 'bbtopics.topic_first_post_id as _pid, '
 
-            + prefix + 'topics.topic_views as _viewcount, '
-            + prefix + 'topics.topic_title as _title, '
-            + prefix + 'topics.topic_time as _timestamp, '
+            + prefix + 'bbtopics.topic_views as _viewcount, '
+            + prefix + 'bbtopics.topic_title as _title, '
+            + prefix + 'bbtopics.topic_time as _timestamp, '
 
             // maybe use that to skip
-            + prefix + 'topics.topic_approved as _approved, '
+            // Not sure what this data is supposed to be, remove?
+            + prefix + 'bbtopics.topic_approved as _approved, '
 
-            + prefix + 'topics.topic_status as _status, '
+            + prefix + 'bbtopics.topic_status as _status, '
 
             //+ prefix + 'TOPICS.TOPIC_IS_STICKY as _pinned, '
-            + prefix + 'posts.poster_id as _uid, '
+            + prefix + 'bbposts.poster_id as _uid, '
             // this should be == to the _tid on top of this query
-            + prefix + 'posts.topic_id as _post_tid, '
+            + prefix + 'bbposts.topic_id as _post_tid, '
 
             // and there is the content I need !!
-            + prefix + 'posts.post_text as _content '
+            + prefix + 'bbposts_text.post_text as _content '
 
-            + 'FROM ' + prefix + 'topics, ' + prefix + 'posts '
+            + 'FROM ' + prefix + 'bbtopics, ' + prefix + 'bbposts, '+ prefix + 'bbposts_text '
             // see
-            + 'WHERE ' + prefix + 'topics.topic_first_post_id=' + prefix + 'posts.post_id '
+            + 'WHERE ' + prefix + 'bbtopics.topic_first_post_id=' + prefix + 'bbposts.post_id '
+            + 'AND ' + prefix + 'bbposts.post_id=' + prefix + 'bbposts_text.post_id '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
 
@@ -227,9 +260,11 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
 		});
 	};
     Exporter.getPosts = function(callback) {
+        Exporter.log('getPosts');
         return Exporter.getPaginatedPosts(0, -1, callback);
     };
     Exporter.getPaginatedPosts = function(start, limit, callback) {
+        Exporter.log('getPaginatedPosts');
         callback = !_.isFunction(callback) ? noop : callback;
 
         var err;
@@ -238,21 +273,23 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
         var query =
             'SELECT ' + prefix + 'posts.post_id as _pid, '
             //+ 'POST_PARENT_ID as _post_replying_to, ' phpbb doesn't have "reply to another post"
-            + prefix + 'posts.topic_id as _tid, '
-            + prefix + 'posts.post_time as _timestamp, '
+            + prefix + 'bbposts.topic_id as _tid, '
+            + prefix + 'bbposts.post_time as _timestamp, '
             // not being used
-            + prefix + 'posts.post_subject as _subject, '
+            + prefix + 'bbposts.post_subject as _subject, '
 
-            + prefix + 'posts.post_text as _content, '
-            + prefix + 'posts.poster_id as _uid, '
+            + prefix + 'bbposts_text.post_text as _content, '
+            + prefix + 'bbposts.poster_id as _uid, '
 
             // maybe use this one to skip
-            + prefix + 'posts.post_approved as _approved '
+            // Not sure what this data is supposed to be, remove?
+            + prefix + 'bbposts.post_approved as _approved '
 
-            + 'FROM ' + prefix + 'posts '
+            + 'FROM ' + prefix + 'bbposts, ' + prefix + 'bbposts_text '
 
-		    // the ones that are topics main posts are filtered below
-            + 'WHERE ' + prefix + 'posts.topic_id > 0 '
+		        // the ones that are topics main posts are filtered below
+            + 'WHERE ' + prefix + 'bbposts.post_id=' + prefix + 'bbposts_text.post_id '
+            + 'AND ' + prefix + 'bbposts.topic_id > 0 '
             + (start >= 0 && limit >= 0 ? 'LIMIT ' + start + ',' + limit : '');
 
         if (!Exporter.connection) {
@@ -294,6 +331,7 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
     };
 
     Exporter.testrun = function(config, callback) {
+        Exporter.log('testrun');
         async.series([
             function(next) {
                 Exporter.setup(config, next);
@@ -315,8 +353,9 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
             }
         ], callback);
     };
-    
+
     Exporter.paginatedTestrun = function(config, callback) {
+        Exporter.log('paginatedTestrun');
         async.series([
             function(next) {
                 Exporter.setup(config, next);
@@ -358,6 +397,7 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
     };
 
     Exporter.config = function(config, val) {
+        Exporter.log('config');
         if (config != null) {
             if (typeof config === 'object') {
                 Exporter._config = config;
@@ -374,17 +414,20 @@ var logPrefix = '[nodebb-plugin-import-phpbb]';
 
     // from Angular https://github.com/angular/angular.js/blob/master/src/ng/directive/input.js#L11
     Exporter.validateUrl = function(url) {
+        Exporter.log('validateUrl');
         var pattern = /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$/;
         return url && url.length < 2083 && url.match(pattern) ? url : '';
     };
 
     Exporter.truncateStr = function(str, len) {
+        Exporter.log('truncateStr');
         if (typeof str != 'string') return str;
         len = _.isNumber(len) && len > 3 ? len : 20;
         return str.length <= len ? str : str.substr(0, len - 3) + '...';
     };
 
     Exporter.whichIsFalsy = function(arr) {
+        Exporter.log('whichIsFalsy');
         for (var i = 0; i < arr.length; i++) {
             if (!arr[i])
                 return i;

@@ -1,7 +1,7 @@
-nodebb-plugin-import-phpbb
+nodebb-plugin-import-phpnuke-phpbb
 ==========================
 
-A phpBB2 to NodeBB exporter based on nodebb-plugin-import-ubb by Aziz Khoury
+A NodeBB data exporter, for phpBB port v2.0.7 based on Tom Nitzschner's phpbb2.0.6 upgraded to phpBB 2.0.7 standalone and compatible with nodebb-plugin-import by Aziz Khoury
 
 Use this to import data into NodeBB using [nodebb-plugin-import](https://github.com/akhoury/nodebb-plugin-import).
 
