@@ -55,6 +55,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     Exporter.log("getPaginatedUsers ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
 
+    // Can join with nuke_bbranks on nuke_users.user_rank = nuke_bbranks.rank_id to get nuke_bbranks.rank_title
+
     var err;
     var prefix = Exporter.config("prefix");
     var startms = +new Date();
@@ -74,6 +76,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "users.user_regdate as _joindate, " +
       // "_alternativeUsername": "u45alt", // OPTIONAL, defaults to '', some forums provide UserDisplayName, we could leverage that if the _username validation fails
       // "_password": '', // OPTIONAL, if you have them, or you want to generate them on your own, great, if not, all passwords will be blank
+      prefix +
+      "users.user_password as _password, " +
       // "_signature": "u45 signature", // OPTIONAL, defaults to '', over 150 chars will be truncated with an '...' at the end
       prefix +
       "users.user_sig as _signature, " +
@@ -83,6 +87,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_pictureBlob": "...BINARY BLOB...", // OPTIONAL, defaults to null
       // "_pictureFilename": "123.png", // OPTIONAL, only applicable if using _pictureBlob, defaults to ''
       // "_path": "/myoldforum/user/123", // OPTIONAL, the old path to reach this user's page, defaults to ''
+      // computed below
       // "_slug": "old-user-slug", // OPTIONAL
       // "_groups": [123, 456, 789], // OPTIONAL, an array of old group ids that this user belongs to, obviously this one depends on implementing the optional getPaginatedGroups function
       // "_website": "u45.com", // OPTIONAL, defaults to ''
@@ -148,6 +153,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         // I don't know about you about I noticed a lot my users have incomplete urls, urls like: http://
         row._picture = validateUrl(row._picture);
         row._website = validateUrl(row._website);
+
+        row._path = '/modules.php?name=Forums&file=profile&mode=viewprofile&u=' + row._uid;
 
         map[row._uid] = row;
       });
@@ -273,37 +280,70 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var startms = +new Date();
     var query =
       "SELECT " +
+      // "_tid": 1, // REQUIRED, THE OLD TOPIC ID
       prefix +
       "bbtopics.topic_id as _tid, " +
+      // TODO: one of these ^V
+      prefix +
+      "bbtopics.topic_first_post_id as _pid, " +
+      // "_uid": 1, // OPTIONAL, THE OLD USER ID, Nodebb will create the topics for user 'Guest' if not provided
+      prefix +
+      "bbposts.poster_id as _uid, " +
+      // "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
+      // "_guest": "Some dude" // OPTIONAL, if you dont have _uid, you can pass a guest name to be used in future features, defaults to null
+      // added below if _uid is empty
+      // "_cid": 1, // REQUIRED, THE OLD CATEGORY ID
       prefix +
       "bbtopics.forum_id as _cid, " +
+      // "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
+      // "_title": "this is topic 1 Title", // OPTIONAL, defaults to "Untitled :id"
+      prefix +
+      "bbtopics.topic_title as _title, " +
+      // "_content": "This is the first content in this topic 1", // REQUIRED
+      prefix +
+      "bbposts_text.post_text as _content " +
+      // "_thumb": "http://foo.bar/picture.png", // OPTIONAL, a thumbnail for the topic if you have one, note that the importer will NOT validate the URL
+      // "_timestamp": 1386475817370, // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates
+      prefix +
+      "bbtopics.topic_time as _timestamp, " +
+      // "_viewcount": 10, // OPTIONAL, defaults to 0
+      prefix +
+      "bbtopics.topic_views as _viewcount, " +
+      // "_locked": 0, // OPTIONAL, defaults to 0, during migration, ALL topics will be unlocked then locked back up at the end
+      // "_tags": ["tag1", "tag2", "tag3"], // OPTIONAL, an array of tags, or a comma separated string would work too, defaults to null
+      // "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
+      // OR you can pass a filename with it
+      // "_attachments": [{url: "http://example.com/myfile.zip", filename: "www.zip"}], // OPTIONAL, an array of objects with urls and filenames, to append to the content for download.
+    	//   OPTIONAL, an array of objects, each object mush have the binary BLOB,
+    	//   either a filename or extension, then each file will be written to disk,
+    	//   if no filename is provided, the extension will be used and a filename will be generated as attachment_t_{_tid}_{index}{extension}
+    	//   and its url would be appended to the _content for download
+      // "_attachmentsBlobs": [ {blob: <BINARY>, filename: "myfile.zip"}, {blob: <BINARY>, extension: ".zip"} ],
+      // "_deleted": 0, // OPTIONAL, defaults to 0
+      // "_pinned": 1 // OPTIONAL, defaults to 0
+      // "_edited": 1386475817370 // OPTIONAL, [UNIT: Milliseconds] see post._edited defaults to null
+      prefix +
+      "bbposts.post_edit_time as _edited, " +
+      // "_reputation": 1234, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
+      // "_path": "/myoldforum/topic/123", // OPTIONAL, the old path to reach this topic's page, defaults to ''
+      // computed below
+      // "_slug": "old-topic-slug" // OPTIONAL, defaults to ''
       // this is the 'parent-post'
       // see https://github.com/akhoury/nodebb-plugin-import#important-note-on-topics-and-posts
       // I don't really need it since I just do a simple join and get its content, but I will include for the reference
       // remember this post EXCLUDED in the exportPosts() function
-      prefix +
-      "bbtopics.topic_first_post_id as _pid, " +
-      prefix +
-      "bbtopics.topic_views as _viewcount, " +
-      prefix +
-      "bbtopics.topic_title as _title, " +
-      prefix +
-      "bbtopics.topic_time as _timestamp, " +
       // maybe use that to skip
       // Not sure what this data is supposed to be, remove?
-      prefix +
-      "bbtopics.topic_approved as _approved, " +
+      // TODO: sort out these, may be unused
+      // prefix +
+      // "bbtopics.topic_approved as _approved, " +
       prefix +
       "bbtopics.topic_status as _status, " +
       //+ prefix + 'TOPICS.TOPIC_IS_STICKY as _pinned, '
-      prefix +
-      "bbposts.poster_id as _uid, " +
       // this should be == to the _tid on top of this query
       prefix +
       "bbposts.topic_id as _post_tid, " +
       // and there is the content I need !!
-      prefix +
-      "bbposts_text.post_text as _content " +
       "FROM " +
       prefix +
       "bbtopics, " +
@@ -343,6 +383,12 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
         row._title = row._title ? row._title[0].toUpperCase() + row._title.substr(1) : "Untitled";
         row._timestamp = (row._timestamp || 0) * 1000 || startms;
+
+        row._path = '/modules.php?name=Forums&file=viewtopic&t=' + row._tid;
+
+        if (!row._uid) {
+          row._guest = 'Unknown poster';
+        }
 
         map[row._tid] = row;
       });
