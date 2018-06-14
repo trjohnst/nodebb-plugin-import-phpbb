@@ -1,6 +1,8 @@
 var async = require("async");
 var mysql = require("mysql");
 var _ = require("underscore");
+var validateUrl = require('./util/validateUrl');
+var truncateString = require('./util/truncateString');
 var noop = function() {};
 var logPrefix = "[nodebb-plugin-import-phpbb]";
 
@@ -36,11 +38,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
   };
 
   Exporter.getUsers = function(callback) {
-    Exporter.log("getUsers");
     return Exporter.getPaginatedUsers(0, -1, callback);
   };
   Exporter.getPaginatedUsers = function(start, limit, callback) {
-    Exporter.log("getPaginatedUsers");
+    Exporter.log("getPaginatedUsers ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
 
     var err;
@@ -51,24 +52,27 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       prefix +
       "users.user_id as _uid, " +
       prefix +
-      "users.username as _username, " +
-      // prefix +
-      // "users.username_clean as _alternativeUsername, " +
+      "users.user_email as _email, " +
       prefix +
-      "users.user_email as _registrationEmail, " +
-      //+ prefix + 'users.user_rank as _level, '
+      "users.username as _username, " +
       prefix +
       "users.user_regdate as _joindate, " +
       prefix +
       "users.user_sig as _signature, " +
       prefix +
-      "users.user_website as _website, " +
-      prefix +
-      "users.user_posts as _reputation, " +
-      prefix +
       "users.user_avatar as _picture, " +
       prefix +
-      "users.user_email as _email " +
+      "users.user_website as _website, " +
+      prefix +
+      "users.name as _fullname, " +
+      prefix +
+      "users.user_from as _location, " +
+      prefix +
+      "users.user_posts as _reputation " +
+      // prefix +
+      // "users.user_email as _registrationEmail, " +
+      // prefix + "users.username_clean as _alternativeUsername, " +
+      //+ prefix + 'users.user_rank as _level, '
       //+ prefix + 'banlist.ban_id as _banned '
       //+ prefix + 'USER_PROFILE.USER_SIGNATURE as _signature, '
       // + prefix + 'USER_PROFILE.USER_HOMEPAGE as _website, '
@@ -109,7 +113,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
         // nbb forces signatures to be less than 150 chars
         // keeping it HTML see https://github.com/akhoury/nodebb-plugin-import#markdown-note
-        row._signature = Exporter.truncateStr(row._signature || "", 150);
+        row._signature = truncateString(row._signature || "", 150);
 
         // from unix timestamp (s) to JS timestamp (ms)
         row._joindate = (row._joindate || 0) * 1000 || startms;
@@ -118,8 +122,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         row._email = (row._email || "").toLowerCase();
 
         // I don't know about you about I noticed a lot my users have incomplete urls, urls like: http://
-        row._picture = Exporter.validateUrl(row._picture);
-        row._website = Exporter.validateUrl(row._website);
+        row._picture = validateUrl(row._picture);
+        row._website = validateUrl(row._website);
 
         map[row._uid] = row;
       });
@@ -129,11 +133,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
   };
 
   Exporter.getCategories = function(callback) {
-    Exporter.log("getCategories");
     return Exporter.getPaginatedCategories(0, -1, callback);
   };
   Exporter.getPaginatedCategories = function(start, limit, callback) {
-    Exporter.log("getPaginatedCategories");
+    Exporter.log("getPaginatedCategories ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
 
     var err;
@@ -180,11 +183,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
   };
 
   Exporter.getTopics = function(callback) {
-    Exporter.log("getTopics");
     return Exporter.getPaginatedTopics(0, -1, callback);
   };
   Exporter.getPaginatedTopics = function(start, limit, callback) {
-    Exporter.log("getPaginatedTopics");
+    Exporter.log("getPaginatedTopics ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
 
     // uses nuke_bbtopics, nuke_bbposts, nuke_bbposts_text
@@ -303,11 +305,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     });
   };
   Exporter.getPosts = function(callback) {
-    Exporter.log("getPosts");
     return Exporter.getPaginatedPosts(0, -1, callback);
   };
   Exporter.getPaginatedPosts = function(start, limit, callback) {
-    Exporter.log("getPaginatedPosts");
+    Exporter.log("getPaginatedPosts ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
 
     var err;
@@ -364,8 +365,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         //normalize here
         var map = {};
         rows.forEach(function(row) {
-          Exporter.log("processing posts ", row._subject"?);
-          // make it's not a topic
+          Exporter.log("processing posts ", row._subject);
+          // make sure it's not a topic
           if (!mpids[row._pid]) {
             row._content = row._content || "";
             row._timestamp = (row._timestamp || 0) * 1000 || startms;
@@ -472,27 +473,5 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       }
     }
     return Exporter._config;
-  };
-
-  // from Angular https://github.com/angular/angular.js/blob/master/src/ng/directive/input.js#L11
-  Exporter.validateUrl = function(url) {
-    Exporter.log("validateUrl");
-    var pattern = /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$/;
-    return url && url.length < 2083 && url.match(pattern) ? url : "";
-  };
-
-  Exporter.truncateStr = function(str, len) {
-    Exporter.log("truncateStr");
-    if (typeof str != "string") return str;
-    len = _.isNumber(len) && len > 3 ? len : 20;
-    return str.length <= len ? str : str.substr(0, len - 3) + "...";
-  };
-
-  Exporter.whichIsFalsy = function(arr) {
-    Exporter.log("whichIsFalsy");
-    for (var i = 0; i < arr.length; i++) {
-      if (!arr[i]) return i;
-    }
-    return null;
   };
 })(module.exports);
