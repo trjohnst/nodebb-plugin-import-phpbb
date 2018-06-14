@@ -450,7 +450,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "bbposts_text.post_text as _content, " +
       // "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
       prefix +
-      "bbposts.poster_id as _uid " +
+      "bbposts.poster_id as _uid, " +
       // "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
       // "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID,
       // "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
@@ -461,7 +461,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
       // "_edited": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], if and when the post was edited, defaults to null
       prefix +
-      "bbposts.post_edit_time as _edited, " +
+      "bbposts.post_edit_time as _edited " +
       // "_reputation": 0, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
       // "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
     	//   OPTIONAL, an array of objects, each object mush have the binary BLOB,
@@ -553,7 +553,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     Exporter.connection.end();
 
     Exporter.log("Done");
-    callback();
+
+    if (typeof callback === 'function') {
+      callback();
+    }
   };
 
   /**
