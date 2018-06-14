@@ -60,26 +60,54 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var startms = +new Date();
     var query =
       "SELECT " +
+      // "_uid": 45, // REQUIRED
       prefix +
       "users.user_id as _uid, " +
+      // "_email": "u45@example.com", // REQUIRED
       prefix +
       "users.user_email as _email, " +
+      // "_username": "user45", // REQUIRED
       prefix +
       "users.username as _username, " +
+      // "_joindate": 1386475817370, // OPTIONAL, [UNIT: MILLISECONDS], defaults to current, but what's the point of migrating if you don't preserve dates
       prefix +
       "users.user_regdate as _joindate, " +
+      // "_alternativeUsername": "u45alt", // OPTIONAL, defaults to '', some forums provide UserDisplayName, we could leverage that if the _username validation fails
+      // "_password": '', // OPTIONAL, if you have them, or you want to generate them on your own, great, if not, all passwords will be blank
+      // "_signature": "u45 signature", // OPTIONAL, defaults to '', over 150 chars will be truncated with an '...' at the end
       prefix +
       "users.user_sig as _signature, " +
+      // "_picture": "http://images.com/derp.png", // OPTIONAL, defaults to ''. Note that, if there is an '_piçture' on the 'normalized' object, the 'imported' objected will be augmented with a key imported.keptPicture = true, so you can iterate later and check if the images 200 or 404s
       prefix +
       "users.user_avatar as _picture, " +
+      // "_pictureBlob": "...BINARY BLOB...", // OPTIONAL, defaults to null
+      // "_pictureFilename": "123.png", // OPTIONAL, only applicable if using _pictureBlob, defaults to ''
+      // "_path": "/myoldforum/user/123", // OPTIONAL, the old path to reach this user's page, defaults to ''
+      // "_slug": "old-user-slug", // OPTIONAL
+      // "_groups": [123, 456, 789], // OPTIONAL, an array of old group ids that this user belongs to, obviously this one depends on implementing the optional getPaginatedGroups function
+      // "_website": "u45.com", // OPTIONAL, defaults to ''
       prefix +
       "users.user_website as _website, " +
+      // "_fullname": "this is dawg", // OPTIONAL, defaults to ''
       prefix +
       "users.name as _fullname, " +
+      // "_banned": 0, // OPTIONAL, defaults to 0
+      // "_readCids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []. read cids and tids by that user, it's more efficient to use _readCids if you know that a user has read all the topics in a category.
+      // "_readTids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []. untested with very large sets. So.
+      // "_followingUids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []. following other _Uids, untested with very large sets. So.
+      // "_friendsUids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []. friend other _Uids, untested with very large sets. So. if you have https://github.com/sanbornmedia/nodebb-plugin-friends installed or want to use it
+      // "_location": "u45 city", // OPTIONAL, defaults to ''
       prefix +
       "users.user_from as _location, " +
+      // "_reputation": 123, // OPTIONAL, defaults to 0, (there is a config for multiplying these with a number for moAr karma).Also, if you're implementing getPaginatedVotes, every vote will also impact the user's reputation
       prefix +
       "users.user_posts as _reputation " +
+      // "_profileviews": 1, // OPTIONAL, defaults to 0
+      // "_birthday": "01/01/1977", // OPTIONAL, [FORMAT: mm/dd/yyyy], defaults to ''
+      // "_showemail": 0, // OPTIONAL, defaults to 0
+      // "_lastposttime": 1386475817370, // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+      // "_level": "administrator" // OPTIONAL, [OPTIONS: 'administrator' or 'moderator'], defaults to '', also note that a moderator will become a NodeBB Moderator on ALL categories at the moment.
+      // "_lastonline": 1386475827370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to undefined
       "FROM " +
       prefix +
       "users " +
@@ -137,6 +165,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
   };
 
   /**
+   * phpBB has two types of categories:
+   * 1. entries in nuke_bbcategories should be treated with the "Treat this category as a section" toggle flipped on in admin
+   * 2. entries in nuke_bbforums should be treated as categories with parent categories (with nuke_bbforums.cat_id = nukebb_categories.cat_id)
+   * This implementation ignores nuke_bbcategories and assumes that moderators will setup sections following the migration
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedcategoriesstart-limit-callback-required-function}
    */
   Exporter.getPaginatedCategories = function(start, limit, callback) {
@@ -148,12 +180,26 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var startms = +new Date();
     var query =
       "SELECT " +
+      // "_cid": 2, // REQUIRED
       prefix +
       "bbforums.forum_id as _cid, " +
+      // "_name": "Category 1", // REQUIRED
       prefix +
       "bbforums.forum_name as _name, " +
+      // "_description": "it's about category 1", // OPTIONAL
       prefix +
-      "bbforums.forum_desc as _description " +
+      "bbforums.forum_desc as _description, " +
+      // "_order": 1 // OPTIONAL, defauls to its index + 1
+      prefix +
+      "bbforums.forum_order as _order " +
+      // "_path": "/myoldforum/category/123", // OPTIONAL, the old path to reach this category's page, defaults to ''
+      // computed below
+      // "_slug": "old-category-slug", // OPTIONAL defaults to ''
+      // "_parentCid": 1, // OPTIONAL, parent category _cid defaults to null
+      // "_skip": 0, // OPTIONAL, if you want to intentionally skip that record
+      // "_color": "#FFFFFF", // OPTIONAL, text color, defaults to random
+      // "_bgColor": "#123ABC", // OPTIONAL, background color, defaults to random
+      // "_icon": "comment", // OPTIONAL, Font Awesome icon, defaults to random
       "FROM " +
       prefix +
       "bbforums " +
@@ -178,12 +224,15 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         row._name = row._name || "Untitled Category";
         row._description = row._description || "No decsciption available";
         row._timestamp = (row._timestamp || 0) * 1000 || startms;
+        row._path = "/modules.php?name=Forums&file=viewforum&f=" + row._cid;
 
         map[row._cid] = row;
       });
 
       callback(null, map);
     });
+
+    Exporter.getPaginatedSubCategories(start, limit, callback);
   };
 
   /**
@@ -195,6 +244,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
   };
 
   /**
+   * Topics in nodeBB are what phpBB considers a combination of information from nuke_bbtopics and information from the post with nuke_bbposts.post_id = nuke_bbtopics.topic_first_post_id
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedtopicsstart-limit-callback-required-function}
    */
   Exporter.getPaginatedTopics = function(start, limit, callback) {
