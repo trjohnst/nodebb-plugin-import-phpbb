@@ -533,11 +533,85 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     });
   };
 
+  /**
+   * @deprecated in favor of getPaginatedPosts, included for backwards compatibility
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetmessagescallback-deprecated}
+   */
+  Exporter.getMessages = function(callback) {
+    return Exporter.getPaginatedMessages(0, -1, callback);
+  };
+
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedmessagesstart-limit-callback-optional-function}
+   */
+  Exporter.getPaginatedMessages = function(start, limit, callback) {
+    Exporter.log("getPaginatedMessages ", start, limit);
+    if (typeof callback !== 'function') {
+      callback = noop;
+    }
+
+    // Relevant tables:
+    //   nuke_bbprivmsgs
+    //   nuke_bbprivmsgs_text
+
+    var err;
+    var prefix = Exporter.config("prefix");
+    var startms = +new Date();
+    var query =
+      "SELECT " +
+      // "_mid": 45, // REQUIRED
+      prefix +
+      "bbprivmsgs.privmsgs_id as _mid, " +
+    	// "_fromuid": 10, // REQUIRED
+      prefix +
+      "bbprivmsgs.privmsgs_from_userid as _fromuid, " +
+    	// "_roomId": 20, // PREFERRED, the _roomId if you are using get(Pagianted)Rooms
+    	// "_touid": 20, // DEPRECATED, if you're not using getPaginatedRooms, you can just pass the _touid value here.
+      prefix +
+      "bbprivmsgs.privmsgs_to_userid as _touid, " +
+    	//   note: I know the camelcasing is weird here, but can't break backward compatible exporters yet.
+    	// "_content": "Hello there!", // REQUIRED
+    	// TODO: how to join with privmsgs_text?
+    	// "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+      prefix +
+      "bbprivmsgs.privmsgs_date as _timestamp " +
+      "FROM " +
+      prefix +
+      "bbprivmsgs " +
+      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+
+    if (!Exporter.connection) {
+      err = { error: "MySQL connection is not setup. Run setup(config) first" };
+      Exporter.error(err.error);
+      return callback(err);
+    }
+
+    Exporter.connection.query(query, function(err, rows) {
+      if (err) {
+        Exporter.error(err);
+        return callback(err);
+      }
+
+      //normalize here
+      var map = {};
+      rows.forEach(function(row) {
+        Exporter.log("processing message ", row._mid);
+
+        // from unix timestamp (s) to JS timestamp (ms)
+        row._timestamp = (row._timestamp || 0) * 1000 || startms;
+
+        row._content = "TODO: make migration script import message content";
+
+        map[row._mid] = row;
+      });
+
+      callback(null, map);
+    });
+  };
+
   // TODO: implement or delete other methods
   // Exporter.getRooms
   // Exporter.getPaginatedRooms
-  // Exporter.getMessages
-  // Exporter.getPaginatedMessages
   // Exporter.getGroups
   // Exporter.getPaginatedGroups
   // Exporter.getVotes
@@ -582,6 +656,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
           Exporter.getPosts(next);
         },
         function(next) {
+          Exporter.getMessages(next);
+        },
+        function(next) {
           Exporter.teardown(next);
         }
       ],
@@ -610,6 +687,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         },
         function(next) {
           Exporter.getPaginatedPosts(1001, 2000, next);
+        },
+        function(next) {
+          Exporter.getPaginatedMessages(0, 1000);
         },
         function(next) {
           Exporter.teardown(next);
