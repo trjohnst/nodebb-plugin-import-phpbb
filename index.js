@@ -534,7 +534,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
   };
 
   /**
-   * @deprecated in favor of getPaginatedPosts, included for backwards compatibility
+   * @deprecated in favor of getPaginatedMessages, included for backwards compatibility
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetmessagescallback-deprecated}
    */
   Exporter.getMessages = function(callback) {
@@ -609,11 +609,82 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     });
   };
 
+  /**
+   * @deprecated in favor of getPaginatedGroups, included for backwards compatibility
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetgroupscallback-deprecated}
+   */
+  Exporter.getGroups = function(callback) {
+    return Exporter.getPaginatedGroups(0, -1, callback);
+  };
+
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedgroupsstart-limit-callback-optional-function}
+   */
+  Exporter.getPaginatedGroups = function(start, limit, callback) {
+    Exporter.log("getPaginatedGroups ", start, limit);
+    if (typeof callback !== 'function') {
+      callback = noop;
+    }
+
+    // Relevant tables:
+    //   nuke_bbgroups
+
+    var err;
+    var prefix = Exporter.config("prefix");
+    var startms = +new Date();
+    var query =
+      "SELECT " +
+      // "_gid": 45, // REQUIRED, old group id
+      prefix +
+      "bbgroups.group_id as _gid, " +
+      // "_name": "My group name", // REQUIRED
+      prefix +
+      "bbgroups.group_name as _name, " +
+      // "_ownerUid": 123, // REQUIRED, owner old user id, aka user._uid,
+      prefix +
+      "bbgroups.group_moderator as _ownerUid, " +
+      // "_description": "My group description", // OPTIONAL
+      prefix +
+      "bbgroups.group_description as _description " +
+      // "_userTitle": "My group badge", // OPTIONAL, will show instead of the _name
+      // "_userTitleEnabled": 1, // OPTIONAL, to show the userTitle at all
+      // "_disableJoinRequests": 0, // OPTIONAL
+      // "_system": 0, // OPTIONAL, if system group
+      // "_private": 0, // OPTIONAL, if private group
+      // "_hidden": 0, // OPTIONAL, if hidden group
+      // "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+      "FROM " +
+      prefix +
+      "bbgroups " +
+      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+
+    if (!Exporter.connection) {
+      err = { error: "MySQL connection is not setup. Run setup(config) first" };
+      Exporter.error(err.error);
+      return callback(err);
+    }
+
+    Exporter.connection.query(query, function(err, rows) {
+      if (err) {
+        Exporter.error(err);
+        return callback(err);
+      }
+
+      //normalize here
+      var map = {};
+      rows.forEach(function(row) {
+        Exporter.log("processing group ", row._gid);
+
+        map[row._gid] = row;
+      });
+
+      callback(null, map);
+    });
+  };
+
   // TODO: implement or delete other methods
   // Exporter.getRooms
   // Exporter.getPaginatedRooms
-  // Exporter.getGroups
-  // Exporter.getPaginatedGroups
   // Exporter.getVotes
   // Exporter.getPaginatedVotes
   // Exporter.getBookmarks
@@ -659,6 +730,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
           Exporter.getMessages(next);
         },
         function(next) {
+          Exporter.getGroups(next);
+        },
+        function(next) {
           Exporter.teardown(next);
         }
       ],
@@ -690,6 +764,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         },
         function(next) {
           Exporter.getPaginatedMessages(0, 1000);
+        },
+        function(next) {
+          Exporter.getPaginatedGroups(0, 1000);
         },
         function(next) {
           Exporter.teardown(next);
