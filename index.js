@@ -305,7 +305,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "bbtopics.topic_title as _title, " +
       // "_content": "This is the first content in this topic 1", // REQUIRED
       prefix +
-      "bbposts_text.post_text as _content " +
+      "bbposts_text.post_text as _content, " +
       // "_thumb": "http://foo.bar/picture.png", // OPTIONAL, a thumbnail for the topic if you have one, note that the importer will NOT validate the URL
       // "_timestamp": 1386475817370, // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates
       prefix +
@@ -346,7 +346,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       //+ prefix + 'TOPICS.TOPIC_IS_STICKY as _pinned, '
       // this should be == to the _tid on top of this query
       prefix +
-      "bbposts.topic_id as _post_tid, " +
+      "bbposts.topic_id as _post_tid " +
       // and there is the content I need !!
       "FROM " +
       prefix +
@@ -440,7 +440,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var query =
       "SELECT " +
       prefix +
-      "posts.post_id as _pid, " +
+      "bbposts.post_id as _pid, " +
       //+ 'POST_PARENT_ID as _post_replying_to, ' phpbb doesn't have "reply to another post"
       prefix +
       "bbposts.topic_id as _tid, " +
@@ -448,15 +448,15 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "bbposts.post_time as _timestamp, " +
       // not being used
       prefix +
-      "bbposts.post_subject as _subject, " +
+      "bbposts_text.post_subject as _subject, " +
       prefix +
       "bbposts_text.post_text as _content, " +
       prefix +
-      "bbposts.poster_id as _uid, " +
+      "bbposts.poster_id as _uid " +
       // maybe use this one to skip
       // Not sure what this data is supposed to be, remove?
-      prefix +
-      "bbposts.post_approved as _approved " +
+      // prefix +
+      // "bbposts.post_approved as _approved " +
       "FROM " +
       prefix +
       "bbposts, " +
