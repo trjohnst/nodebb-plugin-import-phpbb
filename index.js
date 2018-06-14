@@ -133,7 +133,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       //normalize here
       var map = {};
       rows.forEach(function(row) {
-        Exporter.log("processing user ", _username);
+        Exporter.log("processing user ", row._uid, row._username);
 
         // nbb forces signatures to be less than 150 chars
         // keeping it HTML see https://github.com/akhoury/nodebb-plugin-import#markdown-note
@@ -220,8 +220,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       //normalize here
       var map = {};
       rows.forEach(function(row) {
-        Exporter.log("processing category ", row._name);
-        row._name = row._name || "Untitled Category";
+        Exporter.log("processing category ", row._cid, row._name);
+        row._name = row._name || "Untitled Category " + row._cid;
         row._description = row._description || "No decsciption available";
         row._timestamp = (row._timestamp || 0) * 1000 || startms;
         row._path = "/modules.php?name=Forums&file=viewforum&f=" + row._cid;
@@ -339,7 +339,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       //normalize here
       var map = {};
       rows.forEach(function(row) {
-        Exporter.log("processing topics ", row._title);
+        Exporter.log("processing topics ", row._tid, row._title);
 
         row._title = row._title ? row._title[0].toUpperCase() + row._title.substr(1) : "Untitled";
         row._timestamp = (row._timestamp || 0) * 1000 || startms;
@@ -436,7 +436,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         //normalize here
         var map = {};
         rows.forEach(function(row) {
-          Exporter.log("processing posts ", row._subject);
+          Exporter.log("processing posts ", row._pid, row._subject);
           // make sure it's not a topic
           if (!mpids[row._pid]) {
             row._content = row._content || "";
