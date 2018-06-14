@@ -80,21 +80,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "users.user_from as _location, " +
       prefix +
       "users.user_posts as _reputation " +
-      // prefix +
-      // "users.user_email as _registrationEmail, " +
-      // prefix + "users.username_clean as _alternativeUsername, " +
-      //+ prefix + 'users.user_rank as _level, '
-      //+ prefix + 'banlist.ban_id as _banned '
-      //+ prefix + 'USER_PROFILE.USER_SIGNATURE as _signature, '
-      // + prefix + 'USER_PROFILE.USER_HOMEPAGE as _website, '
-      //+ prefix + 'USER_PROFILE.USER_OCCUPATION as _occupation, '
-      //+ prefix + 'USER_PROFILE.USER_LOCATION as _location, '
-      //+ prefix + 'USER_PROFILE.USER_AVATAR as _picture, '
-      //+ prefix + 'USER_PROFILE.USER_TITLE as _title, '
-      //+ prefix + 'USER_PROFILE.USER_RATING as _reputation, '
-      //+ prefix + 'USER_PROFILE.USER_TOTAL_RATES as _profileviews, '
-      //+ prefix + 'USER_PROFILE.USER_BIRTHDAY as _birthday '
-
       "FROM " +
       prefix +
       "users " +
@@ -331,6 +316,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       callback(null, Exporter._topicsMainPids);
     });
   };
+
   /**
    * @deprecated in favor of getPaginatedPosts, included for backwards compatibility
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpostscallback-deprecated}
@@ -338,6 +324,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
   Exporter.getPosts = function(callback) {
     return Exporter.getPaginatedPosts(0, -1, callback);
   };
+
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedpostsstart-limit-callback-required-function}
+   */
   Exporter.getPaginatedPosts = function(start, limit, callback) {
     Exporter.log("getPaginatedPosts ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
@@ -409,6 +399,18 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       });
     });
   };
+
+  // TODO: implement or delete other methods
+  // Exporter.getRooms
+  // Exporter.getPaginatedRooms
+  // Exporter.getMessages
+  // Exporter.getPaginatedMessages
+  // Exporter.getGroups
+  // Exporter.getPaginatedGroups
+  // Exporter.getVotes
+  // Exporter.getPaginatedVotes
+  // Exporter.getBookmarks
+  // Exporter.getPaginatedBookmarks
 
   /**
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmoduleteardowncallback-required-function}
