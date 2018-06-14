@@ -58,6 +58,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     }
 
     // Can join with nuke_bbranks on nuke_users.user_rank = nuke_bbranks.rank_id to get nuke_bbranks.rank_title
+    // TODO: join with nuke_bbuser_group to get group memberships
 
     var err;
     var prefix = Exporter.config("prefix");
