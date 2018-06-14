@@ -1,6 +1,6 @@
 var async = require("async");
 var mysql = require("mysql");
-var _ = require("underscore");
+var toArray = require('lodash.toarray');
 var validateUrl = require('./util/validateUrl');
 var truncateString = require('./util/truncateString');
 var noop = function() {};
@@ -53,7 +53,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
    */
   Exporter.getPaginatedUsers = function(start, limit, callback) {
     Exporter.log("getPaginatedUsers ", start, limit);
-    callback = !_.isFunction(callback) ? noop : callback;
+    if (typeof callback !== 'function') {
+      callback = noop;
+    }
 
     // Can join with nuke_bbranks on nuke_users.user_rank = nuke_bbranks.rank_id to get nuke_bbranks.rank_title
 
@@ -180,7 +182,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
    */
   Exporter.getPaginatedCategories = function(start, limit, callback) {
     Exporter.log("getPaginatedCategories ", start, limit);
-    callback = !_.isFunction(callback) ? noop : callback;
+    if (typeof callback !== 'function') {
+      callback = noop;
+    }
 
     var err;
     var prefix = Exporter.config("prefix");
@@ -238,8 +242,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
       callback(null, map);
     });
-
-    Exporter.getPaginatedSubCategories(start, limit, callback);
   };
 
   /**
@@ -256,7 +258,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
    */
   Exporter.getPaginatedTopics = function(start, limit, callback) {
     Exporter.log("getPaginatedTopics ", start, limit);
-    callback = !_.isFunction(callback) ? noop : callback;
+    if (typeof callback !== 'function') {
+      callback = noop;
+    }
 
     // uses nuke_bbtopics, nuke_bbposts, nuke_bbposts_text
     // nuke_bbtopics:
@@ -426,7 +430,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
    */
   Exporter.getPaginatedPosts = function(start, limit, callback) {
     Exporter.log("getPaginatedPosts ", start, limit);
-    callback = !_.isFunction(callback) ? noop : callback;
+    if (typeof callback !== 'function') {
+      callback = noop;
+    }
 
     var err;
     var prefix = Exporter.config("prefix");
@@ -583,7 +589,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#logger-functions}
    */
   Exporter.warn = function() {
-    var args = _.toArray(arguments);
+    var args = toArray(arguments);
     args.unshift(logPrefix);
     console.warn.apply(console, args);
   };
@@ -592,7 +598,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#logger-functions}
    */
   Exporter.log = function() {
-    var args = _.toArray(arguments);
+    var args = toArray(arguments);
     args.unshift(logPrefix);
     console.log.apply(console, args);
   };
@@ -601,7 +607,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#logger-functions}
    */
   Exporter.error = function() {
-    var args = _.toArray(arguments);
+    var args = toArray(arguments);
     args.unshift(logPrefix);
     console.error.apply(console, args);
   };

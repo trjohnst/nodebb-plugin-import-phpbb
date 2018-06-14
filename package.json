@@ -32,9 +32,10 @@
   "dependencies": {
     "async": "~0.9.0",
     "fs-extra": "~0.11.0",
+    "lodash.isnumber": "^3.0.3",
+    "lodash.toarray": "^4.4.0",
     "marked": "~0.3.2",
-    "mysql": "^2.15.0",
-    "underscore": "~1.6.0"
+    "mysql": "^2.15.0"
   },
   "devDependencies": {
     "prettier": "^1.13.5"
