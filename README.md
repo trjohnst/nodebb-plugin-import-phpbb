@@ -8,3 +8,5 @@ Use this to import data into NodeBB using [nodebb-plugin-import](https://github.
 Have a look at the original [UBB](https://github.com/akhoury/nodebb-plugin-import-ubb) migrator for detailed instructions on how to use this importer.
 
 You may want to check out the [bbcode-to-markdown](https://github.com/psychobunny/nodebb-plugin-bbcode-to-markdown) plugin as well.
+
+This was written using the [write-my-own-exporter instructions](https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md) from [nodebb-plugin-import](https://github.com/akhoury/nodebb-plugin-import).
