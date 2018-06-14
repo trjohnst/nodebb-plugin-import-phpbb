@@ -7,6 +7,9 @@ var noop = function() {};
 var logPrefix = "[nodebb-plugin-import-phpbb]";
 
 (function(Exporter) {
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulesetupconfig-callback-required-function}
+   */
   Exporter.setup = function(config, callback) {
     Exporter.log("setup");
 
@@ -37,9 +40,17 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     callback(null, Exporter.config());
   };
 
+  /**
+   * @deprecated in favor of getPaginatedUsers, included for backwards compatibility
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetuserscallback-deprecated}
+   */
   Exporter.getUsers = function(callback) {
     return Exporter.getPaginatedUsers(0, -1, callback);
   };
+
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedusersstart-limit-callback-required-function}
+   */
   Exporter.getPaginatedUsers = function(start, limit, callback) {
     Exporter.log("getPaginatedUsers ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
@@ -132,9 +143,17 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     });
   };
 
+  /**
+   * @deprecated in favor of getPaginatedCategories, included for backwards compatibility
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetcategoriescallback-deprecated}
+   */
   Exporter.getCategories = function(callback) {
     return Exporter.getPaginatedCategories(0, -1, callback);
   };
+
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedcategoriesstart-limit-callback-required-function}
+   */
   Exporter.getPaginatedCategories = function(start, limit, callback) {
     Exporter.log("getPaginatedCategories ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
@@ -182,9 +201,17 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     });
   };
 
+  /**
+   * @deprecated in favor of getPaginatedTopics, included for backwards compatibility
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegettopicscallback-deprecated}
+   */
   Exporter.getTopics = function(callback) {
     return Exporter.getPaginatedTopics(0, -1, callback);
   };
+
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpaginatedtopicsstart-limit-callback-required-function}
+   */
   Exporter.getPaginatedTopics = function(start, limit, callback) {
     Exporter.log("getPaginatedTopics ", start, limit);
     callback = !_.isFunction(callback) ? noop : callback;
@@ -304,6 +331,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       callback(null, Exporter._topicsMainPids);
     });
   };
+  /**
+   * @deprecated in favor of getPaginatedPosts, included for backwards compatibility
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpostscallback-deprecated}
+   */
   Exporter.getPosts = function(callback) {
     return Exporter.getPaginatedPosts(0, -1, callback);
   };
@@ -379,6 +410,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     });
   };
 
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmoduleteardowncallback-required-function}
+   */
   Exporter.teardown = function(callback) {
     Exporter.log("teardown");
     Exporter.connection.end();
@@ -387,6 +421,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     callback();
   };
 
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#a-testrun-function}
+   */
   Exporter.testrun = function(config, callback) {
     Exporter.log("testrun");
     async.series(
@@ -414,6 +451,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     );
   };
 
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#a-testrun-function}
+   */
   Exporter.paginatedTestrun = function(config, callback) {
     Exporter.log("paginatedTestrun");
     async.series(
@@ -441,18 +481,27 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     );
   };
 
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#logger-functions}
+   */
   Exporter.warn = function() {
     var args = _.toArray(arguments);
     args.unshift(logPrefix);
     console.warn.apply(console, args);
   };
 
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#logger-functions}
+   */
   Exporter.log = function() {
     var args = _.toArray(arguments);
     args.unshift(logPrefix);
     console.log.apply(console, args);
   };
 
+  /**
+   * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#logger-functions}
+   */
   Exporter.error = function() {
     var args = _.toArray(arguments);
     args.unshift(logPrefix);
