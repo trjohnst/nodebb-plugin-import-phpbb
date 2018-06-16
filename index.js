@@ -3,6 +3,7 @@ var mysql = require("mysql");
 var toArray = require('lodash.toarray');
 var validateUrl = require('./util/validateUrl');
 var truncateString = require('./util/truncateString');
+var getLimitClause = require('./util/getLimitClause');
 var noop = function() {};
 var logPrefix = "[nodebb-plugin-import-phpbb]";
 
@@ -128,7 +129,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "users.user_id = " +
       prefix +
       "users.user_id " +
-      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+      getLimitClause(start, limit);
 
     if (!Exporter.connection) {
       err = { error: "MySQL connection is not setup. Run setup(config) first" };
@@ -218,7 +219,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "FROM " +
       prefix +
       "bbforums " +
-      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+      getLimitClause(start, limit);
 
     if (!Exporter.connection) {
       err = { error: "MySQL connection is not setup. Run setup(config) first" };
@@ -370,7 +371,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "bbposts.post_id=" +
       prefix +
       "bbposts_text.post_id " +
-      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+      getLimitClause(start, limit);
 
     if (!Exporter.connection) {
       err = { error: "MySQL connection is not setup. Run setup(config) first" };
@@ -503,7 +504,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "AND " +
       prefix +
       "bbposts.topic_id > 0 " +
-      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+      getLimitClause(start, limit);
 
     if (!Exporter.connection) {
       err = { error: "MySQL connection is not setup. Run setup(config) first" };
@@ -597,7 +598,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "bbprivmsgs.privmsgs_id = " +
       prefix +
       "bbprivmsgs_text.privmsgs_text_id " +
-      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+      getLimitClause(start, limit);
 
     if (!Exporter.connection) {
       err = { error: "MySQL connection is not setup. Run setup(config) first" };
@@ -673,7 +674,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "FROM " +
       prefix +
       "bbgroups " +
-      (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
+      getLimitClause(start, limit);
 
     if (!Exporter.connection) {
       err = { error: "MySQL connection is not setup. Run setup(config) first" };
