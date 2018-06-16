@@ -59,6 +59,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
     // Can join with nuke_bbranks on nuke_users.user_rank = nuke_bbranks.rank_id to get nuke_bbranks.rank_title
     // TODO: join with nuke_bbuser_group to get group memberships
+    // TODO: users getting skipped with duplicate emails:
+    //   [nodebb-plugin-import] importer.warn [2018-06-15T04:16:51.076Z] [process-count-at: 433] skipping username: "Leoparden" Error: [[error:email-taken]]
+    // TODO: signatures truncation breaks in the middle of bb code/markdown
+    // TODO: passwords not working?
 
     var err;
     var prefix = Exporter.config("prefix");
@@ -143,9 +147,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       rows.forEach(function(row) {
         Exporter.log("processing user ", row._uid, row._username);
 
-        // nbb forces signatures to be less than 150 chars
-        // keeping it HTML see https://github.com/akhoury/nodebb-plugin-import#markdown-note
-        row._signature = truncateString(row._signature || "", 150);
+        // nodeBB has max signature lengths enforced by settings (up to 255)
+        row._signature = row._signature || "";
 
         // from unix timestamp (s) to JS timestamp (ms)
         row._joindate = (row._joindate || 0) * 1000 || startms;
@@ -435,6 +438,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       callback = noop;
     }
 
+    // TODO: vote posts
+    // TODO: date is set weird for stickied posts
+
     var err;
     var prefix = Exporter.config("prefix");
     var startms = +new Date();
@@ -555,6 +561,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     //   nuke_bbprivmsgs
     //   nuke_bbprivmsgs_text
 
+    // TODO: message content is included twice for messages that are replied to
+    // TODO: threads are being combined based on just from/to user
+
     var err;
     var prefix = Exporter.config("prefix");
     var startms = +new Date();
@@ -573,12 +582,21 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     	//   note: I know the camelcasing is weird here, but can't break backward compatible exporters yet.
     	// "_content": "Hello there!", // REQUIRED
     	// TODO: how to join with privmsgs_text?
+    	prefix +
+      "bbprivmsgs_text.privmsgs_text as _content, " +
     	// "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
       prefix +
       "bbprivmsgs.privmsgs_date as _timestamp " +
       "FROM " +
       prefix +
-      "bbprivmsgs " +
+      "bbprivmsgs, " +
+      prefix +
+      "bbprivmsgs_text " +
+      "WHERE " +
+      prefix +
+      "bbprivmsgs.privmsgs_id = " +
+      prefix +
+      "bbprivmsgs_text.privmsgs_text_id " +
       (start >= 0 && limit >= 0 ? "LIMIT " + start + "," + limit : "");
 
     if (!Exporter.connection) {
@@ -600,8 +618,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
         // from unix timestamp (s) to JS timestamp (ms)
         row._timestamp = (row._timestamp || 0) * 1000 || startms;
-
-        row._content = "TODO: make migration script import message content";
 
         map[row._mid] = row;
       });
