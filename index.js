@@ -152,7 +152,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         row._signature = row._signature || "";
 
         // from unix timestamp (s) to JS timestamp (ms)
-        row._joindate = (row._joindate || 0) * 1000 || startms;
+        row._joindate = row._joindate ? new Date(row._joindate).getTime() / 1000 : startms;
 
         // lower case the email for consistency
         row._email = (row._email || "").toLowerCase();
