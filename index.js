@@ -701,6 +701,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "FROM " +
       prefix +
       "bbgroups " +
+      "WHERE " +
+      "group_name <> '' " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
