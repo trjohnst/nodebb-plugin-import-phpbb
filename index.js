@@ -59,7 +59,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     }
 
     // Can join with nuke_bbranks on nuke_users.user_rank = nuke_bbranks.rank_id to get nuke_bbranks.rank_title
-    // TODO: join with nuke_bbuser_group to get group memberships
     // TODO: users getting skipped with duplicate emails:
     //   [nodebb-plugin-import] importer.warn [2018-06-15T04:16:51.076Z] [process-count-at: 433] skipping username: "Leoparden" Error: [[error:email-taken]]
     // TODO: signatures truncation breaks in the middle of bb code/markdown
@@ -145,28 +144,56 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
       //normalize here
       var map = {};
-      rows.forEach(function(row) {
-        Exporter.log("processing user ", row._uid, row._username);
+      const rowsCount = rows.length;
+      let processedUserCount = 0;
 
-        // nodeBB has max signature lengths enforced by settings (up to 255)
-        row._signature = row._signature || "";
+      if (rows.length === 0) {
+        // no results, call the callback immediately
+        callback(null, map);
+      } else {
+        rows.forEach(function(row) {
+          Exporter.log("processing user ", row._uid);
 
-        // from unix timestamp (s) to JS timestamp (ms)
-        row._joindate = row._joindate ? new Date(row._joindate).getTime() / 1000 : startms;
+          // nodeBB has max signature lengths enforced by settings (up to 255)
+          row._signature = row._signature || "";
 
-        // lower case the email for consistency
-        row._email = (row._email || "").toLowerCase();
+          // from unix timestamp (s) to JS timestamp (ms)
+          row._joindate = row._joindate ? new Date(row._joindate).getTime() / 1000 : startms;
 
-        // I don't know about you about I noticed a lot my users have incomplete urls, urls like: http://
-        row._picture = validateUrl(row._picture);
-        row._website = validateUrl(row._website);
+          // lower case the email for consistency
+          row._email = (row._email || "").toLowerCase();
 
-        row._path = '/modules.php?name=Forums&file=profile&mode=viewprofile&u=' + row._uid;
+          // I don't know about you about I noticed a lot my users have incomplete urls, urls like: http://
+          row._picture = validateUrl(row._picture);
+          row._website = validateUrl(row._website);
 
-        map[row._uid] = row;
-      });
+          row._path = '/modules.php?name=Forums&file=profile&mode=viewprofile&u=' + row._uid;
 
-      callback(null, map);
+          var groupsQuery =
+          "SELECT " +
+          prefix + "bbuser_group.group_id as group_id " +
+          "FROM " +
+          prefix + "users, " +
+          prefix + "bbuser_group " +
+          "WHERE " +
+          prefix + "users.user_id = " + prefix + "bbuser_group.user_id " +
+          "AND " +
+          prefix + "users.user_id = " + row._uid;
+
+          Exporter.connection.query(groupsQuery, function(err, groupRows) {
+            row._groups = groupRows.map(groupRow => groupRow.group_id);
+            map[row._uid] = row;
+            processedUserCount++;
+
+            Exporter.log("Processed user (with groups)", processedUserCount, "of", rowsCount, "this round");
+            if (processedUserCount === rowsCount) {
+              Exporter.log("Finished processing a round of users");
+              callback(null, map);
+            }
+          });
+        });
+      }
+
     });
   };
 
@@ -691,7 +718,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       //normalize here
       var map = {};
       rows.forEach(function(row) {
-        Exporter.log("processing group ", row._gid);
+        Exporter.log("processing group ", row._gid, " ", row._name);
 
         map[row._gid] = row;
       });
