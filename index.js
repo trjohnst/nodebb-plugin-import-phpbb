@@ -58,12 +58,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       callback = noop;
     }
 
-    // Can join with nuke_bbranks on nuke_users.user_rank = nuke_bbranks.rank_id to get nuke_bbranks.rank_title
-    // TODO: users getting skipped with duplicate emails:
-    //   [nodebb-plugin-import] importer.warn [2018-06-15T04:16:51.076Z] [process-count-at: 433] skipping username: "Leoparden" Error: [[error:email-taken]]
-    // TODO: signatures truncation breaks in the middle of bb code/markdown
-    // TODO: passwords not working?
-
     var err;
     var prefix = Exporter.config("prefix");
     var startms = +new Date();
@@ -294,23 +288,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       callback = noop;
     }
 
-    // uses nuke_bbtopics, nuke_bbposts, nuke_bbposts_text
-    // nuke_bbtopics:
-    //   topic_id
-    //   forum_id
-    //   topic_first_post_id
-    //   topic_views
-    //   topic_title
-    //   topic_views
-    //   topic_time
-    //   topic_status
-    // nuke_bbposts: (has post id and corresponding topic id)
-    //   poster_id
-    //   topic_id
-    // nuke_bbposts_text: (has corresponding post id)
-    //   post_text
-    // unknown: where's topic_approved?
-
     var err;
     var prefix = Exporter.config("prefix");
     var startms = +new Date();
@@ -466,9 +443,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       callback = noop;
     }
 
-    // TODO: vote posts
-    // TODO: date is set weird for stickied posts
-
     var err;
     var prefix = Exporter.config("prefix");
     var startms = +new Date();
@@ -507,15 +481,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
       //   computed below
       // "_slug": "old-post-slug" // OPTIONAL, defaults to ''
-      // TODO: sort below:
-      //+ 'POST_PARENT_ID as _post_replying_to, ' phpbb doesn't have "reply to another post"
-      // not being used
-      // prefix +
-      // "bbposts_text.post_subject as _subject, " +
-      // maybe use this one to skip
-      // Not sure what this data is supposed to be, remove?
-      // prefix +
-      // "bbposts.post_approved as _approved " +
       // end select statements
       "FROM " +
       prefix +
@@ -584,13 +549,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     if (typeof callback !== 'function') {
       callback = noop;
     }
-
-    // Relevant tables:
-    //   nuke_bbprivmsgs
-    //   nuke_bbprivmsgs_text
-
-    // TODO: message content is included twice for messages that are replied to
-    // TODO: threads are being combined based on just from/to user
 
     var err;
     var prefix = Exporter.config("prefix");
@@ -670,9 +628,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     if (typeof callback !== 'function') {
       callback = noop;
     }
-
-    // Relevant tables:
-    //   nuke_bbgroups
 
     var err;
     var prefix = Exporter.config("prefix");
