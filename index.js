@@ -678,6 +678,10 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       rows.forEach(function(row) {
         Exporter.log("processing group ", row._gid, " ", row._name);
 
+        row._disableJoinRequests = 1; // don't allow joining by default
+        row._private = 1; // Make private by default
+        row._hidden = 1; // Hide the group by default
+
         map[row._gid] = row;
       });
 
