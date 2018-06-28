@@ -10,6 +10,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 (function(Exporter) {
   /**
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulesetupconfig-callback-required-function}
+   * @see {@link https://github.com/NodeBB/NodeBB/wiki/Database-Structure}
    */
   Exporter.setup = function(config, callback) {
     Exporter.log("setup");
