@@ -394,22 +394,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     });
   };
 
-  var getTopicsMainPids = function(callback) {
-    if (Exporter._topicsMainPids) {
-      return callback(null, Exporter._topicsMainPids);
-    }
-    Exporter.getPaginatedTopics(0, -1, function(err, topicsMap) {
-      if (err) return callback(err);
-
-      Exporter._topicsMainPids = {};
-      Object.keys(topicsMap).forEach(function(_tid) {
-        var topic = topicsMap[_tid];
-        Exporter._topicsMainPids[topic.topic_first_post_id] = topic._tid;
-      });
-      callback(null, Exporter._topicsMainPids);
-    });
-  };
-
   /**
    * @deprecated in favor of getPaginatedPosts, included for backwards compatibility
    * @see {@link https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md#yourmodulegetpostscallback-deprecated}
@@ -431,6 +415,45 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var prefix = Exporter.config("prefix");
     var startms = +new Date();
     var query =
+      // "SELECT " +
+      // // "_pid": 65487, // REQUIRED, OLD POST ID
+      // "posts.post_id as _pid, " +
+      // // "_tid": 1234, // REQUIRED, OLD TOPIC ID
+      // "posts.topic_id as _tid, " +
+      // // "_content": "Post content ba dum tss", // REQUIRED
+      // "posts_text.post_text as _content, " +
+      // // "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
+      // "posts.poster_id as _uid, " +
+      // // "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
+      // // "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID,
+      // // "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
+      // "posts.post_time as _timestamp, " +
+      // // "_guest": "Some dude" // OPTIONAL, if you don't have _uid, you can pass a guest name to be used in future features, defaults to null
+      // //   added below if _uid is empty
+      // // "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
+      // // "_edited": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], if and when the post was edited, defaults to null
+      // "posts.post_edit_time as _edited " +
+      // // "_reputation": 0, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
+      // // "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
+    	// //   OPTIONAL, an array of objects, each object mush have the binary BLOB,
+    	// //   either a filename or extension, then each file will be written to disk,
+    	// //   if no filename is provided, the extension will be used and a filename will be generated as attachment_p_{_pid}_{index}{extension}
+    	// //   and its url would be appended to the _content for download
+      // // "_attachmentsBlobs": [ {blob: <BINARY>, filename: "myfile.zip"}, {blob: <BINARY>, extension: ".zip"} ],
+      // // "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
+      // //   computed below
+      // // "_slug": "old-post-slug" // OPTIONAL, defaults to ''
+      // // end select statements
+      // "FROM " +
+      // prefix + "bbposts posts, " +
+      // prefix + "bbposts_text posts_text " +
+      // // the ones that are topics main posts are filtered below
+      // "WHERE " +
+      // "posts.post_id = posts_text.post_id " +
+      // "AND " +
+      // "posts.topic_id > 0 " +
+      // getLimitClause(start, limit);
+
       "SELECT " +
       // "_pid": 65487, // REQUIRED, OLD POST ID
       "posts.post_id as _pid, " +
@@ -440,34 +463,27 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "posts_text.post_text as _content, " +
       // "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
       "posts.poster_id as _uid, " +
-      // "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
-      // "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID,
-      // "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
       "posts.post_time as _timestamp, " +
-      // "_guest": "Some dude" // OPTIONAL, if you don't have _uid, you can pass a guest name to be used in future features, defaults to null
-      //   added below if _uid is empty
-      // "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
-      // "_edited": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], if and when the post was edited, defaults to null
       "posts.post_edit_time as _edited " +
-      // "_reputation": 0, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
-      // "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
-    	//   OPTIONAL, an array of objects, each object mush have the binary BLOB,
-    	//   either a filename or extension, then each file will be written to disk,
-    	//   if no filename is provided, the extension will be used and a filename will be generated as attachment_p_{_pid}_{index}{extension}
-    	//   and its url would be appended to the _content for download
-      // "_attachmentsBlobs": [ {blob: <BINARY>, filename: "myfile.zip"}, {blob: <BINARY>, extension: ".zip"} ],
-      // "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
-      //   computed below
-      // "_slug": "old-post-slug" // OPTIONAL, defaults to ''
-      // end select statements
       "FROM " +
-      prefix + "bbposts posts, " +
+      "( " +
+      "  SELECT " +
+      "  post_id, topic_id, poster_id, post_time, post_edit_time " +
+      "  FROM " + prefix + "bbposts " +
+      "  WHERE " +
+      "  post_id not in ( " +
+      "    SELECT topic_first_post_id FROM " + prefix + "bbtopics " +
+      "  ) " +
+      "  AND " +
+      "  post_id not in ( " +
+      "    SELECT post_id FROM " + prefix + "bbposts a INNER JOIN ( " +
+      "      SELECT topic_id FROM " + prefix + "bbtopics WHERE topic_first_post_id = '' " +
+      "    ) b ON a.topic_id = b.topic_id " +
+      "  ) " +
+      ") posts, " +
       prefix + "bbposts_text posts_text " +
-      // the ones that are topics main posts are filtered below
       "WHERE " +
       "posts.post_id = posts_text.post_id " +
-      "AND " +
-      "posts.topic_id > 0 " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
@@ -481,27 +497,24 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         Exporter.error(err);
         return callback(err);
       }
-      getTopicsMainPids(function(err, mpids) {
-        //normalize here
-        var map = {};
-        rows.forEach(function(row) {
-          Exporter.log("processing posts ", row._pid, row._subject);
-          // make sure it's not a topic
-          if (!mpids[row._pid]) {
-            row._content = row._content || "";
-            row._timestamp = (row._timestamp || 0) * 1000 || startms;
-            if (!row._uid) {
-              row._guest = 'Unknown poster';
-            }
 
-            row._path = "/modules.php?name=Forums&file=viewtopic&p=" + row._pid + "#" + row._pid
+      //normalize here
+      var map = {};
+      rows.forEach(function(row) {
+        Exporter.log("processing posts ", row._pid, row._subject);
 
-            map[row._pid] = row;
-          }
-        });
+        row._content = row._content || "";
+        row._timestamp = (row._timestamp || 0) * 1000 || startms;
+        if (!row._uid) {
+          row._guest = 'Unknown poster';
+        }
 
-        callback(null, map);
+        row._path = "/modules.php?name=Forums&file=viewtopic&p=" + row._pid + "#" + row._pid
+
+        map[row._pid] = row;
       });
+
+      callback(null, map);
     });
   };
 
