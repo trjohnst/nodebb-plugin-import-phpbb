@@ -455,6 +455,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_tid": 1234, // REQUIRED, OLD TOPIC ID
       prefix +
       "bbposts.topic_id as _tid, " +
+      // "topic_first_post_id": # // Used to determine if this post should just be the topic content and not imported as a post
+      prefix +
+      "bbtopics.topic_first_post_id as _first_post_id, " +
       // "_content": "Post content ba dum tss", // REQUIRED
       prefix +
       "bbposts_text.post_text as _content, " +
@@ -486,6 +489,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "FROM " +
       prefix +
       "bbposts, " +
+      prefix +
+      "bbtopics, " +
       prefix +
       "bbposts_text " +
       // the ones that are topics main posts are filtered below
