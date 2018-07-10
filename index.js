@@ -167,14 +167,14 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
           var groupsQuery =
           "SELECT " +
-          prefix + "bbuser_group.group_id as group_id " +
+          "user_to_group.group_id as group_id " +
           "FROM " +
-          prefix + "users, " +
-          prefix + "bbuser_group " +
+          prefix + "users users, " +
+          prefix + "bbuser_group user_to_group " +
           "WHERE " +
-          prefix + "users.user_id = " + prefix + "bbuser_group.user_id " +
+          "users.user_id = user_to_group.user_id " +
           "AND " +
-          prefix + "users.user_id = " + row._uid;
+          "users.user_id = " + row._uid;
 
           Exporter.connection.query(groupsQuery, function(err, groupRows) {
             row._groups = groupRows.map(groupRow => groupRow.group_id);
@@ -220,17 +220,13 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var query =
       "SELECT " +
       // "_cid": 2, // REQUIRED
-      prefix +
-      "bbforums.forum_id as _cid, " +
+      "forums.forum_id as _cid, " +
       // "_name": "Category 1", // REQUIRED
-      prefix +
-      "bbforums.forum_name as _name, " +
+      "forums.forum_name as _name, " +
       // "_description": "it's about category 1", // OPTIONAL
-      prefix +
-      "bbforums.forum_desc as _description, " +
+      "forums.forum_desc as _description, " +
       // "_order": 1 // OPTIONAL, defauls to its index + 1
-      prefix +
-      "bbforums.forum_order as _order " +
+      "forums.forum_order as _order " +
       // "_path": "/myoldforum/category/123", // OPTIONAL, the old path to reach this category's page, defaults to ''
       // computed below
       // "_slug": "old-category-slug", // OPTIONAL defaults to ''
@@ -240,8 +236,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_bgColor": "#123ABC", // OPTIONAL, background color, defaults to random
       // "_icon": "comment", // OPTIONAL, Font Awesome icon, defaults to random
       "FROM " +
-      prefix +
-      "bbforums " +
+      prefix + "bbforums forums " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
@@ -299,34 +294,26 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var query =
       "SELECT " +
       // "_tid": 1, // REQUIRED, THE OLD TOPIC ID
-      prefix +
-      "bbtopics.topic_id as _tid, " +
+      "topics.topic_id as _tid, " +
       // TODO: one of these ^V
-      prefix +
-      "bbtopics.topic_first_post_id as _pid, " +
+      "topics.topic_first_post_id as _pid, " +
       // "_uid": 1, // OPTIONAL, THE OLD USER ID, Nodebb will create the topics for user 'Guest' if not provided
-      prefix +
-      "bbposts.poster_id as _uid, " +
+      "posts.poster_id as _uid, " +
       // "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
       // "_guest": "Some dude" // OPTIONAL, if you dont have _uid, you can pass a guest name to be used in future features, defaults to null
       // added below if _uid is empty
       // "_cid": 1, // REQUIRED, THE OLD CATEGORY ID
-      prefix +
-      "bbtopics.forum_id as _cid, " +
+      "topics.forum_id as _cid, " +
       // "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
       // "_title": "this is topic 1 Title", // OPTIONAL, defaults to "Untitled :id"
-      prefix +
-      "bbtopics.topic_title as _title, " +
+      "topics.topic_title as _title, " +
       // "_content": "This is the first content in this topic 1", // REQUIRED
-      prefix +
-      "bbposts_text.post_text as _content, " +
+      "posts_text.post_text as _content, " +
       // "_thumb": "http://foo.bar/picture.png", // OPTIONAL, a thumbnail for the topic if you have one, note that the importer will NOT validate the URL
       // "_timestamp": 1386475817370, // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates
-      prefix +
-      "bbtopics.topic_time as _timestamp, " +
+      "topics.topic_time as _timestamp, " +
       // "_viewcount": 10, // OPTIONAL, defaults to 0
-      prefix +
-      "bbtopics.topic_views as _viewcount, " +
+      "topics.topic_views as _viewcount, " +
       // "_locked": 0, // OPTIONAL, defaults to 0, during migration, ALL topics will be unlocked then locked back up at the end
       // "_tags": ["tag1", "tag2", "tag3"], // OPTIONAL, an array of tags, or a comma separated string would work too, defaults to null
       // "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
@@ -340,8 +327,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_deleted": 0, // OPTIONAL, defaults to 0
       // "_pinned": 1 // OPTIONAL, defaults to 0
       // "_edited": 1386475817370 // OPTIONAL, [UNIT: Milliseconds] see post._edited defaults to null
-      prefix +
-      "bbposts.post_edit_time as _edited, " +
+      "posts.post_edit_time as _edited, " +
       // "_reputation": 1234, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
       // "_path": "/myoldforum/topic/123", // OPTIONAL, the old path to reach this topic's page, defaults to ''
       // computed below
@@ -359,27 +345,20 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "bbtopics.topic_status as _status, " +
       //+ prefix + 'TOPICS.TOPIC_IS_STICKY as _pinned, '
       // this should be == to the _tid on top of this query
-      prefix +
-      "bbposts.topic_id as _post_tid " +
+      "posts.topic_id as _post_tid " +
       // end select statements
       "FROM " +
       prefix +
-      "bbtopics, " +
+      "bbtopics topics, " +
       prefix +
-      "bbposts, " +
+      "bbposts posts, " +
       prefix +
-      "bbposts_text " +
+      "bbposts_text posts_text " +
       // see
       "WHERE " +
-      prefix +
-      "bbtopics.topic_first_post_id=" +
-      prefix +
-      "bbposts.post_id " +
+      "topics.topic_first_post_id = posts.post_id " +
       "AND " +
-      prefix +
-      "bbposts.post_id=" +
-      prefix +
-      "bbposts_text.post_id " +
+      "posts.post_id = posts_text.post_id " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
@@ -454,28 +433,22 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var query =
       "SELECT " +
       // "_pid": 65487, // REQUIRED, OLD POST ID
-      prefix +
-      "bbposts.post_id as _pid, " +
+      "posts.post_id as _pid, " +
       // "_tid": 1234, // REQUIRED, OLD TOPIC ID
-      prefix +
-      "bbposts.topic_id as _tid, " +
+      "posts.topic_id as _tid, " +
       // "_content": "Post content ba dum tss", // REQUIRED
-      prefix +
-      "bbposts_text.post_text as _content, " +
+      "posts_text.post_text as _content, " +
       // "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
-      prefix +
-      "bbposts.poster_id as _uid, " +
+      "posts.poster_id as _uid, " +
       // "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
       // "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID,
       // "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
-      prefix +
-      "bbposts.post_time as _timestamp, " +
+      "posts.post_time as _timestamp, " +
       // "_guest": "Some dude" // OPTIONAL, if you don't have _uid, you can pass a guest name to be used in future features, defaults to null
       //   added below if _uid is empty
       // "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
       // "_edited": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], if and when the post was edited, defaults to null
-      prefix +
-      "bbposts.post_edit_time as _edited " +
+      "posts.post_edit_time as _edited " +
       // "_reputation": 0, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
       // "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
     	//   OPTIONAL, an array of objects, each object mush have the binary BLOB,
@@ -488,19 +461,13 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_slug": "old-post-slug" // OPTIONAL, defaults to ''
       // end select statements
       "FROM " +
-      prefix +
-      "bbposts, " +
-      prefix +
-      "bbposts_text " +
+      prefix + "bbposts posts, " +
+      prefix + "bbposts_text posts_text " +
       // the ones that are topics main posts are filtered below
       "WHERE " +
-      prefix +
-      "bbposts.post_id=" +
-      prefix +
-      "bbposts_text.post_id " +
+      "posts.post_id = posts_text.post_id " +
       "AND " +
-      prefix +
-      "bbposts.topic_id > 0 " +
+      "posts.topic_id > 0 " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
@@ -561,33 +528,25 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var query =
       "SELECT " +
       // "_mid": 45, // REQUIRED
-      prefix +
-      "bbprivmsgs.privmsgs_id as _mid, " +
+      "messages.privmsgs_id as _mid, " +
     	// "_fromuid": 10, // REQUIRED
-      prefix +
-      "bbprivmsgs.privmsgs_from_userid as _fromuid, " +
+      "messages.privmsgs_from_userid as _fromuid, " +
     	// "_roomId": 20, // PREFERRED, the _roomId if you are using get(Pagianted)Rooms
     	// "_touid": 20, // DEPRECATED, if you're not using getPaginatedRooms, you can just pass the _touid value here.
-      prefix +
-      "bbprivmsgs.privmsgs_to_userid as _touid, " +
+      "messages.privmsgs_to_userid as _touid, " +
     	//   note: I know the camelcasing is weird here, but can't break backward compatible exporters yet.
     	// "_content": "Hello there!", // REQUIRED
     	// TODO: how to join with privmsgs_text?
-    	prefix +
-      "bbprivmsgs_text.privmsgs_text as _content, " +
+      "text.privmsgs_text as _content, " +
     	// "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
-      prefix +
-      "bbprivmsgs.privmsgs_date as _timestamp " +
+      "messages.privmsgs_date as _timestamp " +
       "FROM " +
       prefix +
-      "bbprivmsgs, " +
+      "bbprivmsgs messages, " +
       prefix +
-      "bbprivmsgs_text " +
+      "bbprivmsgs_text text " +
       "WHERE " +
-      prefix +
-      "bbprivmsgs.privmsgs_id = " +
-      prefix +
-      "bbprivmsgs_text.privmsgs_text_id " +
+      "messages.privmsgs_id = text.privmsgs_text_id " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
@@ -640,17 +599,13 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     var query =
       "SELECT " +
       // "_gid": 45, // REQUIRED, old group id
-      prefix +
-      "bbgroups.group_id as _gid, " +
+      "group_id as _gid, " +
       // "_name": "My group name", // REQUIRED
-      prefix +
-      "bbgroups.group_name as _name, " +
+      "group_name as _name, " +
       // "_ownerUid": 123, // REQUIRED, owner old user id, aka user._uid,
-      prefix +
-      "bbgroups.group_moderator as _ownerUid, " +
+      "group_moderator as _ownerUid, " +
       // "_description": "My group description", // OPTIONAL
-      prefix +
-      "bbgroups.group_description as _description " +
+      "group_description as _description " +
       // "_userTitle": "My group badge", // OPTIONAL, will show instead of the _name
       // "_userTitleEnabled": 1, // OPTIONAL, to show the userTitle at all
       // "_disableJoinRequests": 0, // OPTIONAL
