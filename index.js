@@ -4,6 +4,7 @@ var toArray = require('lodash.toarray');
 var validateUrl = require('./util/validateUrl');
 var truncateString = require('./util/truncateString');
 var getLimitClause = require('./util/getLimitClause');
+var getcolorFromCategoryId = require('./util/getColorFromCategoryId');
 var noop = function() {};
 var logPrefix = "[nodebb-plugin-import-phpbb]";
 
@@ -260,9 +261,12 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       rows.forEach(function(row) {
         Exporter.log("processing category ", row._cid, row._name);
         row._name = row._name || "Untitled Category " + row._cid;
-        row._description = row._description || "No decsciption available";
+        row._description = row._description || "No decsription available";
         row._timestamp = (row._timestamp || 0) * 1000 || startms;
         row._path = "/modules.php?name=Forums&file=viewforum&f=" + row._cid;
+        row._icon = "fa-comments";
+        row._color = "#fff";
+        row._bgColor = getcolorFromCategoryId(row._cid);
 
         map[row._cid] = row;
       });
