@@ -314,6 +314,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "topics.topic_time as _timestamp, " +
       // "_viewcount": 10, // OPTIONAL, defaults to 0
       "topics.topic_views as _viewcount, " +
+      // used to calculate "_pinned": 1 // OPTIONAL, defaults to 0
+      "topics.topic_type as topic_type, " +
       // "_locked": 0, // OPTIONAL, defaults to 0, during migration, ALL topics will be unlocked then locked back up at the end
       // "_tags": ["tag1", "tag2", "tag3"], // OPTIONAL, an array of tags, or a comma separated string would work too, defaults to null
       // "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
@@ -325,7 +327,6 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     	//   and its url would be appended to the _content for download
       // "_attachmentsBlobs": [ {blob: <BINARY>, filename: "myfile.zip"}, {blob: <BINARY>, extension: ".zip"} ],
       // "_deleted": 0, // OPTIONAL, defaults to 0
-      // "_pinned": 1 // OPTIONAL, defaults to 0
       // "_edited": 1386475817370 // OPTIONAL, [UNIT: Milliseconds] see post._edited defaults to null
       "posts.post_edit_time as _edited, " +
       // "_reputation": 1234, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
@@ -380,6 +381,13 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
 
         row._title = row._title ? row._title[0].toUpperCase() + row._title.substr(1) : "Untitled";
         row._timestamp = (row._timestamp || 0) * 1000 || startms;
+
+        var isTopicSticky = row['topic_type'] === 1;
+        var isTopicAnnouncement = row['topic_type'] === 2;
+
+        if (isTopicSticky || isTopicAnnouncement) {
+          row._pinned = 1;
+        }
 
         row._path = '/modules.php?name=Forums&file=viewtopic&t=' + row._tid;
 
@@ -522,7 +530,7 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "WHERE " +
       "messages.privmsgs_id = text.privmsgs_text_id " +
       "AND " +
-      "messages.privmsgs_type <> 0 "
+      "messages.privmsgs_type <> 0 " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
