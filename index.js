@@ -521,6 +521,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "bbprivmsgs_text text " +
       "WHERE " +
       "messages.privmsgs_id = text.privmsgs_text_id " +
+      "AND " +
+      "messages.privmsgs_type <> 0 "
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
