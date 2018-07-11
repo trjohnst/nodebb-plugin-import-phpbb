@@ -415,6 +415,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "topics.topic_first_post_id = posts.post_id " +
       "AND " +
       "posts.post_id = posts_text.post_id " +
+      "AND " +
+      "topics.topic_poster not in (select ban_userid from " + prefix + "bbbanlist) " +
       getLimitClause(start, limit);
 
     if (!Exporter.connection) {
@@ -485,6 +487,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "posts.topic_id as _tid, " +
       // "_content": "Post content ba dum tss", // REQUIRED
       "posts_text.post_text as _content, " +
+      // used for logs
+      "posts_text.post_subject as _subject, " +
       // "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
       "posts.poster_id as _uid, " +
       "posts.post_time as _timestamp, " +
@@ -495,14 +499,22 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       "  post_id, topic_id, poster_id, post_time, post_edit_time " +
       "  FROM " + prefix + "bbposts " +
       "  WHERE " +
+      // Filter out posts being used as topic descriptions
       "  post_id not in ( " +
       "    SELECT topic_first_post_id FROM " + prefix + "bbtopics " +
       "  ) " +
       "  AND " +
+      // Filter out posts being used as topic descriptions that aren't linked up
+      // in the database correctly
       "  post_id not in ( " +
       "    SELECT post_id FROM " + prefix + "bbposts a INNER JOIN ( " +
       "      SELECT topic_id FROM " + prefix + "bbtopics WHERE topic_first_post_id = '' " +
       "    ) b ON a.topic_id = b.topic_id " +
+      "  ) " +
+      "  AND " +
+      // Filter out posts from banned users
+      "  poster_id not in ( " +
+      "    SELECT ban_userid from " + prefix + "bbbanlist " +
       "  ) " +
       ") posts, " +
       prefix + "bbposts_text posts_text " +
