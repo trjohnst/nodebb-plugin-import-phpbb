@@ -309,8 +309,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         row._path = "/modules.php?name=Forums&file=viewforum&f=" + row._cid;
         row._icon = "fa-comments";
         row._color = "#fff";
-        row._bgColor = getColorFromCategoryId(row._cat_id);
         row._parentCid = getParentCategoryIdFromCategoryId(row._cat_id);
+        row._bgColor = getColorFromCategoryId(row._parentCid);
 
         map[row._cid] = row;
       });

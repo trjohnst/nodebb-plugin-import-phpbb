@@ -1,31 +1,31 @@
-function convertNumberToHex(number) {
-  return number.toString(16);
+function getRandomHexColor() {
+  var r = convertNumberToHex(getRandomNumber());
+  var g = convertNumberToHex(getRandomNumber());
+  var b = convertNumberToHex(getRandomNumber());
+
+  return '#' + r + g + b;
 }
 
-function convertHexToColor(hex) {
-  var color = hex;
-  var diff = 6 - color.length;
+function getRandomNumber() {
+  return Math.floor(Math.random()*255) + 1;
+}
 
-  if (diff < 0) {
-    color = color.substr(0,6);
-  } else if (diff > 0) {
-    var padding = '';
+function convertNumberToHex(number) {
+  var hex = number.toString(16);
 
-    for (var i = 0; i < diff; i++) {
-      padding += '0';
-    }
-
-    color = padding + color;
+  if (hex.length === 1) {
+    hex = '0' + hex;
   }
 
-  color = '#' + color;
-
-  return color;
+  return hex;
 }
 
-module.exports = function(id) {
-  var hex = convertNumberToHex(id);
-  var color = convertHexToColor(hex);
+var idToColor = {};
 
-  return color;
+module.exports = function(id) {
+  if (!idToColor[id]) {
+    idToColor[id] = getRandomHexColor();
+  }
+
+  return idToColor[id];
 };
