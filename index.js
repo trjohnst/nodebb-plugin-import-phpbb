@@ -4,7 +4,9 @@ var toArray = require('lodash.toarray');
 var validateUrl = require('./util/validateUrl');
 var truncateString = require('./util/truncateString');
 var getLimitClause = require('./util/getLimitClause');
-var getcolorFromCategoryId = require('./util/getColorFromCategoryId');
+var getColorFromCategoryId = require('./util/getColorFromCategoryId');
+var getParentCategoryIdFromCategoryId = require('./util/getParentCategoryIdFromCategoryId');
+
 var noop = function() {};
 var logPrefix = "[nodebb-plugin-import-phpbb]";
 
@@ -201,6 +203,48 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
     return Exporter.getPaginatedCategories(0, -1, callback);
   };
 
+  var getParentCategories = function(map, callback) {
+    var err;
+    var prefix = Exporter.config("prefix");
+    var query =
+      "SELECT " +
+      "categories.cat_id as _cat_id, " +
+      "categories.cat_title as _name, " +
+      "categories.cat_order as _order " +
+      "FROM " +
+      prefix + "bbcategories categories";
+
+    if (!Exporter.connection) {
+      err = { error: "MySQL connection is not setup. Run setup(config) first" };
+      Exporter.error(err.error);
+      return callback(err);
+    }
+
+    Exporter.connection.query(query, function(err, rows) {
+      if (err) {
+        Exporter.error(err);
+        return callback(err);
+      }
+
+      //normalize here
+      rows.forEach(function(row) {
+        row._cid = getParentCategoryIdFromCategoryId(row._cat_id);
+        Exporter.log("processing parent category ", row._cat_id, row._name, row._cid);
+        row._description = ' '; // Importer puts "no description available" by default otherwise
+        row._name = row._name || "Untitled Section " + row._cid;
+        row._path = "/modules.php?name=Forums&file=index&c=" + row._cat_id;
+        row._icon = "fa-comments";
+        row._color = "#fff";
+        row._bgColor = getColorFromCategoryId(row._cid);
+
+        map[row._cid] = row;
+      });
+
+      Exporter.log("parent categories processed: ", rows.length);
+      callback(null, map);
+    });
+  }
+
   /**
    * phpBB has two types of categories:
    * 1. entries in nuke_bbcategories should be treated with the "Treat this category as a section" toggle flipped on in admin
@@ -226,7 +270,9 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_description": "it's about category 1", // OPTIONAL
       "forums.forum_desc as _description, " +
       // "_order": 1 // OPTIONAL, defauls to its index + 1
-      "forums.forum_order as _order " +
+      "forums.forum_order as _order, " +
+      // used to determine color
+      "forums.cat_id as _cat_id " +
       // "_path": "/myoldforum/category/123", // OPTIONAL, the old path to reach this category's page, defaults to ''
       // computed below
       // "_slug": "old-category-slug", // OPTIONAL defaults to ''
@@ -235,6 +281,8 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
       // "_color": "#FFFFFF", // OPTIONAL, text color, defaults to random
       // "_bgColor": "#123ABC", // OPTIONAL, background color, defaults to random
       // "_icon": "comment", // OPTIONAL, Font Awesome icon, defaults to random
+      // "_parentCid" : parent category id
+      // computed below
       "FROM " +
       prefix + "bbforums forums " +
       getLimitClause(start, limit);
@@ -261,13 +309,20 @@ var logPrefix = "[nodebb-plugin-import-phpbb]";
         row._path = "/modules.php?name=Forums&file=viewforum&f=" + row._cid;
         row._icon = "fa-comments";
         row._color = "#fff";
-        row._bgColor = getcolorFromCategoryId(row._cid);
+        row._bgColor = getColorFromCategoryId(row._cat_id);
+        row._parentCid = getParentCategoryIdFromCategoryId(row._cat_id);
 
         map[row._cid] = row;
       });
 
-      callback(null, map);
+      // on the last paginated run, grab the parent categories
+      if (rows.length < (limit - start)) {
+        return getParentCategories(map, callback);
+      } else {
+        callback(null, map);
+      }
     });
+
   };
 
   /**
